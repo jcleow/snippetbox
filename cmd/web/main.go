@@ -3,9 +3,12 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/jcleow/snippetbox/pkg/models/mysql"
 
 	// since we don't use anything in the mysql package
 	// we try to import it normally
@@ -16,6 +19,8 @@ import (
 type application struct{
 	errorLog *log.Logger
 	infoLog *log.Logger
+	snippets *mysql.SnippetModel
+	templateCache map[string]*template.Template
 }
 
 func main() {
@@ -51,10 +56,18 @@ func main() {
 	// https://gobyexample.com/defer
 	defer db.Close()
 
+	//Initialize a new template cache
+	templateCache, err := newTemplateCache("./ui/html/")
+	if err != nil{
+		errorLog.Fatal(err)
+	}
+
 	// Initialize a new instance of application contianing dependencies
 	app := &application{
 		errorLog: errorLog,
 		infoLog: infoLog,
+		snippets :&mysql.SnippetModel{DB:db},
+		templateCache: templateCache,
 	}
 
 	srv := &http.Server{
